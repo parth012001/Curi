@@ -1,0 +1,297 @@
+import re
+import nltk
+from textblob import TextBlob
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+import pandas as pd
+
+# Download required NLTK data
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords')
+
+class ConversationalEngine:
+    def __init__(self, data_processor):
+        self.data_processor = data_processor
+        self.stop_words = set(stopwords.words('english'))
+        
+        # Define beauty-related keywords and categories
+        self.beauty_keywords = {
+            'skin_type': ['sensitive', 'oily', 'dry', 'combination', 'normal', 'acne-prone'],
+            'product_type': ['cleanser', 'moisturizer', 'serum', 'toner', 'mask', 'exfoliator', 'sunscreen'],
+            'concern': ['anti-aging', 'acne', 'wrinkles', 'dark spots', 'hyperpigmentation', 'redness'],
+            'brand': ['cerave', 'neutrogena', 'la roche-posay', 'the ordinary', 'paula\'s choice'],
+            'price': ['budget', 'affordable', 'expensive', 'luxury', 'premium'],
+            'effect': ['gentle', 'strong', 'harsh', 'soothing', 'hydrating', 'matte']
+        }
+        
+    def extract_intent(self, query):
+        """Extract user intent from natural language query"""
+        query_lower = query.lower()
+        
+        # Define intent patterns
+        intent_patterns = {
+            'search': r'\b(find|search|look for|recommend|suggest)\b',
+            'compare': r'\b(compare|vs|versus|difference between)\b',
+            'review': r'\b(review|opinion|experience|thoughts)\b',
+            'price': r'\b(price|cost|budget|affordable|expensive)\b',
+            'specific': r'\b(specific|particular|exact)\b'
+        }
+        
+        for intent, pattern in intent_patterns.items():
+            if re.search(pattern, query_lower):
+                return intent
+                
+        return 'search'  # Default intent
+        
+    def extract_features(self, query):
+        """Extract product features and preferences from query"""
+        query_lower = query.lower()
+        extracted_features = {}
+        
+        # Extract skin type
+        for skin_type in self.beauty_keywords['skin_type']:
+            if skin_type in query_lower:
+                extracted_features['skin_type'] = skin_type
+                break
+                
+        # Extract product type
+        for product_type in self.beauty_keywords['product_type']:
+            if product_type in query_lower:
+                extracted_features['product_type'] = product_type
+                break
+                
+        # Extract concerns
+        concerns = []
+        for concern in self.beauty_keywords['concern']:
+            if concern in query_lower:
+                concerns.append(concern)
+        if concerns:
+            extracted_features['concerns'] = concerns
+            
+        # Extract brand preferences
+        brands = []
+        for brand in self.beauty_keywords['brand']:
+            if brand in query_lower:
+                brands.append(brand)
+        if brands:
+            extracted_features['brands'] = brands
+            
+        # Extract price preferences
+        for price_term in self.beauty_keywords['price']:
+            if price_term in query_lower:
+                extracted_features['price_range'] = price_term
+                break
+                
+        # Extract effects
+        effects = []
+        for effect in self.beauty_keywords['effect']:
+            if effect in query_lower:
+                effects.append(effect)
+        if effects:
+            extracted_features['effects'] = effects
+            
+        return extracted_features
+        
+    def enhance_query(self, query, features):
+        """Enhance the search query based on extracted features"""
+        enhanced_terms = []
+        
+        # Add skin type context
+        if 'skin_type' in features:
+            enhanced_terms.append(f"{features['skin_type']} skin")
+            
+        # Add product type
+        if 'product_type' in features:
+            enhanced_terms.append(features['product_type'])
+            
+        # Add concerns
+        if 'concerns' in features:
+            for concern in features['concerns']:
+                enhanced_terms.append(concern)
+                
+        # Add effects
+        if 'effects' in features:
+            for effect in features['effects']:
+                enhanced_terms.append(effect)
+                
+        # Combine original query with enhanced terms
+        enhanced_query = query + ' ' + ' '.join(enhanced_terms)
+        return enhanced_query
+        
+    def get_smart_recommendations(self, query, top_k=10):
+        """Get intelligent recommendations based on natural language query"""
+        # Extract intent and features
+        intent = self.extract_intent(query)
+        features = self.extract_features(query)
+        
+        # Enhance query
+        enhanced_query = self.enhance_query(query, features)
+        
+        # Get base search results
+        search_results = self.data_processor.search_products(enhanced_query, top_k=top_k)
+        
+        # Apply additional filtering based on features
+        filtered_results = self.apply_feature_filters(search_results, features)
+        
+        # Add user insights and reviews
+        enriched_results = self.enrich_with_insights(filtered_results)
+        
+        return {
+            'query': query,
+            'intent': intent,
+            'features': features,
+            'recommendations': enriched_results
+        }
+        
+    def apply_feature_filters(self, results, features):
+        """Apply additional filtering based on extracted features"""
+        if not features:
+            return results
+            
+        filtered_results = []
+        
+        for result in results:
+            product = self.data_processor.get_product_by_asin(result['asin'])
+            if product is None:
+                continue
+                
+            # Check brand preferences
+            if 'brands' in features:
+                product_brand = product.get('store', '').lower() if isinstance(product, dict) else str(product['store']).lower()
+                if not any(brand in product_brand for brand in features['brands']):
+                    continue
+                    
+            # Check price range (if we had price data)
+            if 'price_range' in features:
+                # This would require price data in the product metadata
+                pass
+                
+            filtered_results.append(result)
+            
+        return filtered_results if filtered_results else results
+        
+    def enrich_with_insights(self, results):
+        """Add user insights and reviews to recommendations"""
+        enriched_results = []
+        
+        for result in results:
+            # Get reviews for this product
+            reviews = self.data_processor.get_reviews_by_asin(result['asin'], limit=3)
+            
+            # Extract key insights from reviews
+            insights = self.extract_review_insights(reviews)
+            
+            # Add to result
+            enriched_result = result.copy()
+            enriched_result['insights'] = insights
+            enriched_result['review_count'] = len(reviews)
+            
+            enriched_results.append(enriched_result)
+            
+        return enriched_results
+        
+    def extract_review_insights(self, reviews):
+        """Extract key insights from reviews"""
+        if reviews.empty:
+            return []
+            
+        insights = []
+        
+        # Analyze sentiment
+        positive_reviews = reviews[reviews['rating'] >= 4]
+        negative_reviews = reviews[reviews['rating'] <= 2]
+        
+        if len(positive_reviews) > 0:
+            # Extract common positive themes
+            positive_text = ' '.join(positive_reviews['text'].tolist())
+            positive_themes = self.extract_themes(positive_text)
+            insights.append(f"👍 Users love: {', '.join(positive_themes[:3])}")
+            
+        if len(negative_reviews) > 0:
+            # Extract common negative themes
+            negative_text = ' '.join(negative_reviews['text'].tolist())
+            negative_themes = self.extract_themes(negative_text)
+            insights.append(f"👎 Users mention: {', '.join(negative_themes[:3])}")
+            
+        # Add overall sentiment
+        avg_rating = reviews['rating'].mean()
+        if avg_rating >= 4.5:
+            insights.append("⭐ Highly recommended by users")
+        elif avg_rating >= 4.0:
+            insights.append("⭐ Well-rated by users")
+            
+        return insights
+        
+    def extract_themes(self, text):
+        """Extract common themes from text"""
+        # Simple keyword extraction (could be enhanced with more sophisticated NLP)
+        common_themes = [
+            'gentle', 'effective', 'smells', 'texture', 'results',
+            'sensitive', 'irritating', 'hydrating', 'smooth', 'clean'
+        ]
+        
+        found_themes = []
+        text_lower = text.lower()
+        
+        for theme in common_themes:
+            if theme in text_lower:
+                found_themes.append(theme)
+                
+        return found_themes
+        
+    def get_conversational_response(self, query):
+        """Generate a conversational response with recommendations"""
+        analysis = self.get_smart_recommendations(query)
+        
+        # Generate natural language response
+        response = self.generate_response(analysis)
+        
+        return {
+            'response': response,
+            'recommendations': analysis['recommendations'],
+            'intent': analysis['intent'],
+            'features': analysis['features']
+        }
+        
+    def generate_response(self, analysis):
+        """Generate a natural language response"""
+        query = analysis['query']
+        intent = analysis['intent']
+        features = analysis['features']
+        recommendations = analysis['recommendations']
+        
+        # Start with acknowledgment
+        response = f"I understand you're looking for beauty products related to '{query}'. "
+        
+        # Add context based on extracted features
+        if features.get('skin_type'):
+            response += f"I'll focus on products suitable for {features['skin_type']} skin. "
+            
+        if features.get('product_type'):
+            response += f"I'm searching for {features['product_type']} options. "
+            
+        if features.get('concerns'):
+            concerns = ', '.join(features['concerns'])
+            response += f"I'll consider your concerns about {concerns}. "
+            
+        # Add recommendation count
+        response += f"I found {len(recommendations)} great options for you. "
+        
+        # Add top recommendation highlight
+        if recommendations:
+            top_rec = recommendations[0]
+            response += f"My top recommendation is {top_rec['title']} by {top_rec['store']} "
+            response += f"(rated {top_rec['average_rating']:.1f}/5 by {top_rec['rating_number']} users). "
+            
+            if 'insights' in top_rec and top_rec['insights']:
+                response += f"Users say: {top_rec['insights'][0]} "
+                
+        response += "Would you like me to show you more details about any of these products?"
+        
+        return response 

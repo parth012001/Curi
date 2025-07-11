@@ -4,6 +4,7 @@ from textblob import TextBlob
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import pandas as pd
+from llm_engine import LLMEngine
 
 # Download required NLTK data
 try:
@@ -16,8 +17,9 @@ except LookupError:
     nltk.download('stopwords')
 
 class ConversationalEngine:
-    def __init__(self, data_processor):
+    def __init__(self, data_processor, llm_engine=None):
         self.data_processor = data_processor
+        self.llm_engine = llm_engine or LLMEngine()
         self.stop_words = set(stopwords.words('english'))
         
         # Define beauty-related keywords and categories
@@ -51,6 +53,40 @@ class ConversationalEngine:
         
     def extract_features(self, query):
         """Extract product features and preferences from query"""
+        # Use LLM for better feature extraction if available
+        if self.llm_engine.is_available():
+            preferences = self.llm_engine.extract_user_preferences(query)
+            return self._convert_preferences_to_features(preferences)
+        
+        # Fallback to original keyword-based extraction
+        return self._extract_features_keyword_based(query)
+    
+    def _convert_preferences_to_features(self, preferences):
+        """Convert LLM preferences to features format"""
+        features = {}
+        
+        if preferences.get('product_type'):
+            features['product_type'] = preferences['product_type']
+        
+        if preferences.get('skin_type'):
+            features['skin_type'] = preferences['skin_type']
+        
+        if preferences.get('concerns'):
+            features['concerns'] = preferences['concerns']
+        
+        if preferences.get('brand_preference'):
+            features['brands'] = [preferences['brand_preference']]
+        
+        if preferences.get('price_range'):
+            features['price_range'] = preferences['price_range']
+        
+        if preferences.get('effects'):
+            features['effects'] = preferences['effects']
+        
+        return features
+    
+    def _extract_features_keyword_based(self, query):
+        """Original keyword-based feature extraction"""
         query_lower = query.lower()
         extracted_features = {}
         
@@ -100,6 +136,11 @@ class ConversationalEngine:
         
     def enhance_query(self, query, features):
         """Enhance the search query based on extracted features"""
+        # Use LLM for query enhancement if available
+        if self.llm_engine.is_available():
+            return self.llm_engine.enhance_query(query)
+        
+        # Fallback to original enhancement
         enhanced_terms = []
         
         # Add skin type context
@@ -139,6 +180,27 @@ class ConversationalEngine:
         # Apply additional filtering based on features
         filtered_results = self.apply_feature_filters(search_results, features)
         
+        # Use LLM to analyze and rank products if available
+        if self.llm_engine.is_available():
+            analysis_results = []
+            for result in filtered_results[:5]:  # Analyze top 5 for efficiency
+                # Get product details and reviews
+                product = self.data_processor.get_product_by_asin(result['asin'])
+                reviews = self.data_processor.get_reviews_by_asin(result['asin'], limit=3)
+                
+                if product is not None:
+                    analysis = self.llm_engine.analyze_product_match(query, product, reviews.to_dict('records') if not reviews.empty else None)
+                    analysis_results.append(analysis)
+                    result['llm_analysis'] = analysis
+                else:
+                    analysis_results.append({"match_score": 0.5, "reasoning": "Product not found"})
+            
+            # Sort by LLM match score if available
+            if analysis_results:
+                filtered_results = sorted(filtered_results, 
+                                       key=lambda x: x.get('llm_analysis', {}).get('match_score', 0), 
+                                       reverse=True)
+        
         # Add user insights and reviews
         enriched_results = self.enrich_with_insights(filtered_results)
         
@@ -146,7 +208,8 @@ class ConversationalEngine:
             'query': query,
             'intent': intent,
             'features': features,
-            'recommendations': enriched_results
+            'recommendations': enriched_results,
+            'enhanced_query': enhanced_query
         }
         
     def apply_feature_filters(self, results, features):
@@ -250,17 +313,25 @@ class ConversationalEngine:
         analysis = self.get_smart_recommendations(query)
         
         # Generate natural language response
-        response = self.generate_response(analysis)
+        if self.llm_engine.is_available():
+            # Use LLM for response generation
+            top_products = analysis['recommendations'][:3]  # Top 3 products
+            analysis_results = [product.get('llm_analysis', {}) for product in top_products]
+            response = self.llm_engine.generate_response(query, top_products, analysis_results)
+        else:
+            # Use fallback response generation
+            response = self.generate_response(analysis)
         
         return {
             'response': response,
             'recommendations': analysis['recommendations'],
             'intent': analysis['intent'],
-            'features': analysis['features']
+            'features': analysis['features'],
+            'enhanced_query': analysis.get('enhanced_query', query)
         }
         
     def generate_response(self, analysis):
-        """Generate a natural language response"""
+        """Generate a natural language response (fallback)"""
         query = analysis['query']
         intent = analysis['intent']
         features = analysis['features']

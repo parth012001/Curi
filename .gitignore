@@ -1,6 +1,8 @@
 All_Beauty.jsonl
 meta_All_Beauty.jsonl
 reviews_sample.jsonl
+products_with_reviews.jsonl
+.env
 *.pkl
 *.csv
 __pycache__/

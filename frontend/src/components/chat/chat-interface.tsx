@@ -2,16 +2,19 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Send, Sparkles, Loader2 } from "lucide-react"
+import { Send, Sparkles, Loader2, User, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ChatMessageComponent } from "./chat-message"
 import { ChatMessage, apiCall, ChatResponse } from "@/lib/utils"
+import { useSession, signOut } from "next-auth/react"
 
 export function ChatInterface() {
+  const { data: session } = useSession()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -74,17 +77,72 @@ export function ChatInterface() {
     }
   }
 
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showUserMenu) {
+        setShowUserMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showUserMenu])
+
   return (
     <div className="flex flex-col h-[80vh] bg-white/70">
       {/* Header */}
-      <div className="sticky top-0 z-10 flex items-center gap-3 p-4 border-b border-gray-100 bg-white/80 backdrop-blur-md shadow-sm">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center shadow-md">
-          <Sparkles className="w-5 h-5 text-white" />
+      <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-gray-100 bg-white/80 backdrop-blur-md shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center shadow-md">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="font-bold text-lg text-gray-900 tracking-tight">Curi</h1>
+            <p className="text-xs text-gray-500">Your beauty product assistant</p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-bold text-lg text-gray-900 tracking-tight">Curi</h1>
-          <p className="text-xs text-gray-500">Your beauty product assistant</p>
-        </div>
+        
+        {/* User Menu */}
+        {session && (
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-sm font-medium text-gray-700">
+                {session.user?.name || session.user?.email?.split('@')[0] || 'User'}
+              </span>
+            </Button>
+            
+            {showUserMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-50">
+                <div className="px-4 py-2 border-b border-gray-100">
+                  <p className="text-sm font-medium text-gray-900">
+                    {session.user?.name || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {session.user?.email}
+                  </p>
+                </div>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Messages */}

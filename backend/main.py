@@ -140,8 +140,36 @@ async def chat(message: ChatMessage):
                     serializable_product[key] = value
             serializable_products.append(serializable_product)
         
-        # Calculate confidence based on response quality
-        confidence = min(0.9, 0.5 + len(serializable_products) * 0.1 + len(insights) * 0.05)
+        # Calculate confidence based on response quality and LLM analysis
+        confidence = 0.3  # Base confidence - start lower
+        
+        # Boost confidence based on number of products
+        if len(serializable_products) > 0:
+            confidence += 0.2
+            
+        # Boost confidence based on LLM analysis availability and quality
+        llm_analyzed_count = sum(1 for p in serializable_products if p.get('llm_analysis'))
+        if llm_analyzed_count > 0:
+            # Check quality of LLM analysis
+            high_quality_matches = sum(1 for p in serializable_products 
+                                     if p.get('llm_analysis', {}).get('match_score', 0) > 0.7)
+            if high_quality_matches > 0:
+                confidence += 0.3  # High quality matches
+            else:
+                confidence += 0.1  # Low quality matches
+        else:
+            confidence += 0.05  # No LLM analysis available
+            
+        # Boost confidence based on insights quality
+        if insights:
+            confidence += 0.1
+            
+        # Boost confidence based on response length (indicates more detailed response)
+        if len(chat_response) > 100:
+            confidence += 0.05
+            
+        # Cap confidence at 0.9 (90%) - more realistic
+        confidence = min(0.9, confidence)
         
         return ChatResponse(
             response=chat_response,

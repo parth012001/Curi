@@ -190,6 +190,19 @@ class ConversationalEngine:
                 
                 if product is not None:
                     analysis = self.llm_engine.analyze_product_match(query, product, reviews.to_dict('records') if not reviews.empty else None)
+                    
+                    # Normalize match score from 0-10 to 0-1 scale
+                    if 'match_score' in analysis:
+                        # Convert from 0-10 scale to 0-1 scale
+                        raw_score = analysis['match_score']
+                        if isinstance(raw_score, (int, float)):
+                            # Ensure score is within 0-10 range first
+                            raw_score = max(0, min(10, raw_score))
+                            # Convert to 0-1 scale
+                            analysis['match_score'] = raw_score / 10.0
+                        else:
+                            analysis['match_score'] = 0.5  # Default if invalid
+                    
                     analysis_results.append(analysis)
                     result['llm_analysis'] = analysis
                 else:
@@ -337,32 +350,53 @@ class ConversationalEngine:
         features = analysis['features']
         recommendations = analysis['recommendations']
         
-        # Start with acknowledgment
-        response = f"I understand you're looking for beauty products related to '{query}'. "
+        # Start with acknowledgment and context
+        response = f"I found some beauty products related to '{query}'. "
         
         # Add context based on extracted features
         if features.get('skin_type'):
-            response += f"I'll focus on products suitable for {features['skin_type']} skin. "
+            response += f"I've focused on products suitable for {features['skin_type']} skin. "
             
         if features.get('product_type'):
-            response += f"I'm searching for {features['product_type']} options. "
+            response += f"I'm showing you the best {features['product_type']} options. "
             
         if features.get('concerns'):
             concerns = ', '.join(features['concerns'])
-            response += f"I'll consider your concerns about {concerns}. "
+            response += f"I've considered your concerns about {concerns}. "
             
-        # Add recommendation count
-        response += f"I found {len(recommendations)} great options for you. "
-        
-        # Add top recommendation highlight
+        # Add recommendation count and highlight top choice
         if recommendations:
-            top_rec = recommendations[0]
-            response += f"My top recommendation is {top_rec['title']} by {top_rec['store']} "
-            response += f"(rated {top_rec['average_rating']:.1f}/5 by {top_rec['rating_number']} users). "
+            response += f"I found {len(recommendations)} options for you. "
             
-            if 'insights' in top_rec and top_rec['insights']:
-                response += f"Users say: {top_rec['insights'][0]} "
+            top_rec = recommendations[0]
+            
+            # Check if we have LLM analysis for the top product
+            if 'llm_analysis' in top_rec and top_rec['llm_analysis']:
+                match_score = top_rec['llm_analysis'].get('match_score', 0)
+                reasoning = top_rec['llm_analysis'].get('reasoning', '')
                 
-        response += "Would you like me to show you more details about any of these products?"
+                # Only recommend if match score is reasonable
+                if match_score > 0.6:  # 60% or higher
+                    response += f"My top recommendation is **{top_rec['title']}** by {top_rec['store']}. "
+                    response += f"This product has a rating of {top_rec['average_rating']:.1f}/5 from {top_rec['rating_number']} users. "
+                    
+                    if reasoning:
+                        response += f"Here's why this matches your needs: {reasoning} "
+                else:
+                    response += f"I found some related products, though they may not be perfect matches for your specific needs. "
+                    response += f"The top result is {top_rec['title']} by {top_rec['store']} "
+                    response += f"(rated {top_rec['average_rating']:.1f}/5 by {top_rec['rating_number']} users). "
+            else:
+                # No LLM analysis available
+                response += f"My top recommendation is **{top_rec['title']}** by {top_rec['store']}. "
+                response += f"This product has a rating of {top_rec['average_rating']:.1f}/5 from {top_rec['rating_number']} users. "
+            
+            # Add insights if available
+            if 'insights' in top_rec and top_rec['insights']:
+                response += f"Key feedback from users: {top_rec['insights'][0]} "
+                
+            response += "I've included other options below for you to compare."
+        else:
+            response += "I couldn't find exact matches, but I've included some related products that might interest you."
         
         return response 

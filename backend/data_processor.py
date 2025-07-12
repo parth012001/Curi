@@ -18,47 +18,57 @@ class BeautyDataProcessor:
         self.tfidf_matrix = None
         self.tfidf_vectorizer = None
         
-    def load_data(self):
-        """Load all three data sources"""
-        print("Loading product metadata...")
-        # Load product metadata
+    def load_sample_data(self):
+        """Load sample data for MVP"""
+        print("Loading sample data...")
+        
+        # Load products with embedded reviews
         products_data = []
-        
-        # Try to load sample data first, fall back to full data
-        try:
-            with open('meta_sample.jsonl', 'r') as f:
-                for line in f:
-                    products_data.append(json.loads(line))
-            print("Using sample dataset...")
-        except FileNotFoundError:
-            with open('meta_All_Beauty.jsonl', 'r') as f:
-                for line in f:
-                    products_data.append(json.loads(line))
-            print("Using full dataset...")
-            
-        self.products_df = pd.DataFrame(products_data)
-        
-        print("Loading reviews and ratings...")
-        # Load reviews (which contain ratings)
         reviews_data = []
         
         try:
-            with open('reviews_sample.jsonl', 'r') as f:
+            with open('products_with_reviews.jsonl', 'r') as f:
                 for line in f:
-                    reviews_data.append(json.loads(line))
-        except FileNotFoundError:
-            with open('All_Beauty.jsonl', 'r') as f:
-                for line in f:
-                    reviews_data.append(json.loads(line))
+                    product = json.loads(line)
+                    products_data.append(product)
                     
+                    # Extract reviews from product
+                    if 'reviews' in product and product['reviews']:
+                        for review in product['reviews']:
+                            # Add product info to review
+                            review['parent_asin'] = product.get('parent_asin', '')
+                            review['product_title'] = product.get('title', '')
+                            review['store'] = product.get('store', '')
+                            review['main_category'] = product.get('main_category', '')
+                            reviews_data.append(review)
+            print("Using products_with_reviews dataset...")
+        except FileNotFoundError:
+            print("Sample data not found. Please ensure products_with_reviews.jsonl is in the backend directory.")
+            raise FileNotFoundError("Sample data files not found")
+            
+        self.products_df = pd.DataFrame(products_data)
         self.reviews_df = pd.DataFrame(reviews_data)
         
         # Create ratings dataframe from reviews
         print("Creating ratings dataframe from reviews...")
-        self.ratings_df = self.reviews_df[['user_id', 'asin', 'rating', 'timestamp']].copy()
-        self.ratings_df.columns = ['UserId', 'ProductId', 'Rating', 'Timestamp']
+        if not self.reviews_df.empty:
+            self.ratings_df = self.reviews_df[['user_id', 'asin', 'rating', 'timestamp']].copy()
+            self.ratings_df.columns = ['UserId', 'ProductId', 'Rating', 'Timestamp']
+        else:
+            # Create empty ratings dataframe if no reviews
+            self.ratings_df = pd.DataFrame(columns=['UserId', 'ProductId', 'Rating', 'Timestamp'])
+        
+        # Preprocess data
+        self.preprocess_data()
+        self.create_product_features()
+        self.build_tfidf_matrix()
         
         print(f"Loaded {len(self.products_df)} products, {len(self.reviews_df)} reviews, {len(self.ratings_df)} ratings")
+        
+        # Create aliases for compatibility
+        self.products = self.products_df
+        self.reviews = self.reviews_df
+        self.ratings = self.ratings_df
         
     def preprocess_data(self):
         """Clean and prepare data for analysis"""
@@ -69,6 +79,10 @@ class BeautyDataProcessor:
         self.products_df['title'] = self.products_df['title'].astype(str)
         self.products_df['average_rating'] = pd.to_numeric(self.products_df['average_rating'], errors='coerce')
         self.products_df['rating_number'] = pd.to_numeric(self.products_df['rating_number'], errors='coerce')
+        
+        # Add price column if not present (for compatibility)
+        if 'price' not in self.products_df.columns:
+            self.products_df['price'] = 0.0  # Default price
         
         # Clean reviews data
         self.reviews_df = self.reviews_df.dropna(subset=['text', 'title', 'asin'])

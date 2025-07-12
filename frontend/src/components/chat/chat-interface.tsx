@@ -15,7 +15,13 @@ export function ChatInterface() {
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Debug session
+  useEffect(() => {
+    console.log('Session:', session)
+  }, [session])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -80,7 +86,10 @@ export function ChatInterface() {
   // Close user menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showUserMenu) {
+      const target = event.target as Element
+      const userMenu = target.closest('.user-menu')
+      
+      if (showUserMenu && !userMenu) {
         setShowUserMenu(false)
       }
     }
@@ -107,7 +116,7 @@ export function ChatInterface() {
         
         {/* User Menu */}
         {session && (
-          <div className="relative">
+          <div className="relative user-menu">
             <Button
               variant="ghost"
               size="sm"
@@ -133,11 +142,22 @@ export function ChatInterface() {
                   </p>
                 </div>
                 <button
-                  onClick={() => signOut({ callbackUrl: '/' })}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  onClick={async () => {
+                    console.log('Sign out clicked')
+                    setIsSigningOut(true)
+                    setShowUserMenu(false)
+                    try {
+                      await signOut({ callbackUrl: '/' })
+                    } catch (error) {
+                      console.error('Sign out error:', error)
+                      setIsSigningOut(false)
+                    }
+                  }}
+                  disabled={isSigningOut}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50"
                 >
                   <LogOut className="w-4 h-4" />
-                  Sign Out
+                  {isSigningOut ? 'Signing out...' : 'Sign Out'}
                 </button>
               </div>
             )}

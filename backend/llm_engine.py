@@ -96,12 +96,31 @@ class LLMEngine:
             Number of Reviews: {product.get('rating_number', 0)}
             """
             
+            # Enhanced review analysis if available
+            review_analysis = ""
             if reviews:
-                # Add sample reviews
-                review_texts = []
-                for review in reviews[:3]:  # Limit to 3 reviews
-                    review_texts.append(f"Review: {review.get('title', '')} - {review.get('text', '')[:200]}...")
-                product_info += "\nSample Reviews:\n" + "\n".join(review_texts)
+                # Import advanced NLP analyzer for review analysis
+                try:
+                    from advanced_nlp_analyzer import AdvancedNLPAnalyzer
+                    nlp_analyzer = AdvancedNLPAnalyzer()
+                    nlp_analysis = nlp_analyzer.analyze_reviews(reviews)
+                    
+                    # Add advanced NLP insights to the analysis
+                    review_analysis = f"""
+                    Advanced Review Analysis:
+                    - Sentiment: {nlp_analysis['sentiment_analysis']['average_sentiment']:.2f}
+                    - Skin Types Mentioned: {list(nlp_analysis['skin_type_mentions'].keys())}
+                    - Key Effects: {list(nlp_analysis['effect_analysis'].keys())}
+                    - Ingredients: {nlp_analysis['ingredient_mentions']}
+                    - Price Sentiment: {nlp_analysis['price_sentiment']}
+                    - Key Insights: {nlp_analysis['overall_insights']}
+                    """
+                except ImportError:
+                    # Fallback to basic review analysis
+                    review_texts = []
+                    for review in reviews[:3]:
+                        review_texts.append(f"Review: {review.get('title', '')} - {review.get('text', '')[:200]}...")
+                    review_analysis = "\nSample Reviews:\n" + "\n".join(review_texts)
             
             prompt = f"""
             Analyze how well this beauty product matches the user's query.
@@ -111,27 +130,32 @@ class LLMEngine:
             Product Information:
             {product_info}
             
+            {review_analysis}
+            
             Rate the match from 0-10 and explain why. Consider:
             - Product type relevance
-            - Skin type compatibility
+            - Skin type compatibility (based on review mentions)
             - User concerns addressed
             - Brand reputation
-            - User reviews sentiment
+            - User reviews sentiment and insights
+            - Ingredient effectiveness for the user's needs
+            - Price-value relationship
             
             Return a JSON response with:
             - match_score (0-10)
-            - reasoning (explanation)
+            - reasoning (detailed explanation)
             - key_features (list of relevant features)
+            - confidence_level (high/medium/low based on review data quality)
             """
             
             client = openai.OpenAI(api_key=self.api_key)
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a beauty product expert. Analyze product matches objectively."},
+                    {"role": "system", "content": "You are a beauty product expert. Analyze product matches objectively using advanced review insights."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=300,
+                max_tokens=400,
                 temperature=0.2
             )
             
@@ -144,12 +168,13 @@ class LLMEngine:
                 return {
                     "match_score": 0.5,
                     "reasoning": "Analysis completed but parsing failed",
-                    "key_features": []
+                    "key_features": [],
+                    "confidence_level": "medium"
                 }
                 
         except Exception as e:
             print(f"⚠️  LLM product analysis failed: {e}")
-            return {"match_score": 0.5, "reasoning": "Analysis failed", "key_features": []}
+            return {"match_score": 0.5, "reasoning": "Analysis failed", "key_features": [], "confidence_level": "low"}
     
     def generate_response(self, user_query: str, top_products: List[Dict], analysis_results: List[Dict]) -> str:
         """

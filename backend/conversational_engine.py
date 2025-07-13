@@ -5,6 +5,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 import pandas as pd
 from llm_engine import LLMEngine
+from advanced_nlp_analyzer import AdvancedNLPAnalyzer
 
 # Download required NLTK data
 try:
@@ -20,6 +21,7 @@ class ConversationalEngine:
     def __init__(self, data_processor, llm_engine=None):
         self.data_processor = data_processor
         self.llm_engine = llm_engine or LLMEngine()
+        self.nlp_analyzer = AdvancedNLPAnalyzer()
         self.stop_words = set(stopwords.words('english'))
         
         # Define beauty-related keywords and categories
@@ -253,73 +255,50 @@ class ConversationalEngine:
         return filtered_results if filtered_results else results
         
     def enrich_with_insights(self, results):
-        """Add user insights and reviews to recommendations"""
+        """Add user insights and reviews to recommendations using advanced NLP"""
         enriched_results = []
         
         for result in results:
             # Get reviews for this product
-            reviews = self.data_processor.get_reviews_by_asin(result['asin'], limit=3)
+            reviews = self.data_processor.get_reviews_by_asin(result['asin'], limit=5)
             
-            # Extract key insights from reviews
-            insights = self.extract_review_insights(reviews)
-            
-            # Add to result
-            enriched_result = result.copy()
-            enriched_result['insights'] = insights
-            enriched_result['review_count'] = len(reviews)
+            # Use advanced NLP analysis
+            if not reviews.empty:
+                review_data = reviews.to_dict('records')
+                nlp_analysis = self.nlp_analyzer.analyze_reviews(review_data)
+                
+                # Add to result
+                enriched_result = result.copy()
+                enriched_result['insights'] = nlp_analysis['overall_insights']
+                enriched_result['review_count'] = len(reviews)
+                enriched_result['nlp_analysis'] = nlp_analysis
+            else:
+                # No reviews available
+                enriched_result = result.copy()
+                enriched_result['insights'] = []
+                enriched_result['review_count'] = 0
+                enriched_result['nlp_analysis'] = self.nlp_analyzer._empty_analysis()
             
             enriched_results.append(enriched_result)
             
         return enriched_results
         
     def extract_review_insights(self, reviews):
-        """Extract key insights from reviews"""
+        """Extract key insights from reviews using advanced NLP"""
         if reviews.empty:
             return []
-            
-        insights = []
         
-        # Analyze sentiment
-        positive_reviews = reviews[reviews['rating'] >= 4]
-        negative_reviews = reviews[reviews['rating'] <= 2]
+        # Use advanced NLP analyzer
+        review_data = reviews.to_dict('records')
+        nlp_analysis = self.nlp_analyzer.analyze_reviews(review_data)
         
-        if len(positive_reviews) > 0:
-            # Extract common positive themes
-            positive_text = ' '.join(positive_reviews['text'].tolist())
-            positive_themes = self.extract_themes(positive_text)
-            insights.append(f"👍 Users love: {', '.join(positive_themes[:3])}")
-            
-        if len(negative_reviews) > 0:
-            # Extract common negative themes
-            negative_text = ' '.join(negative_reviews['text'].tolist())
-            negative_themes = self.extract_themes(negative_text)
-            insights.append(f"👎 Users mention: {', '.join(negative_themes[:3])}")
-            
-        # Add overall sentiment
-        avg_rating = reviews['rating'].mean()
-        if avg_rating >= 4.5:
-            insights.append("⭐ Highly recommended by users")
-        elif avg_rating >= 4.0:
-            insights.append("⭐ Well-rated by users")
-            
-        return insights
+        return nlp_analysis['overall_insights']
         
     def extract_themes(self, text):
-        """Extract common themes from text"""
-        # Simple keyword extraction (could be enhanced with more sophisticated NLP)
-        common_themes = [
-            'gentle', 'effective', 'smells', 'texture', 'results',
-            'sensitive', 'irritating', 'hydrating', 'smooth', 'clean'
-        ]
-        
-        found_themes = []
-        text_lower = text.lower()
-        
-        for theme in common_themes:
-            if theme in text_lower:
-                found_themes.append(theme)
-                
-        return found_themes
+        """Extract common themes from text using advanced NLP"""
+        # This method is now deprecated in favor of advanced NLP
+        # Keeping for backward compatibility
+        return []
         
     def get_conversational_response(self, query):
         """Generate a conversational response with recommendations"""

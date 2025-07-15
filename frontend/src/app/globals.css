@@ -1,10 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-white text-gray-900;
-  font-family: Arial, Helvetica, sans-serif;
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  color: #22223B;
+  background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 40%, #c7d2fe 100%);
+  /* Subtle animated gradient for modern feel */
+  background-attachment: fixed;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255,255,255,0.6);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border-radius: 2rem;
+  transition: box-shadow 0.2s, border 0.2s;
+}
+.glass:hover {
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.16);
+  border: 1.5px solid rgba(255,255,255,0.5);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  color: #22223B;
+  font-weight: 700;
+  margin-bottom: 0.5em;
+}
+
+a {
+  color: #7C83FD;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a:hover {
+  color: #A3B18A;
+}
+
+button, .btn {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  background: rgba(124,131,253,0.85);
+  color: #fff;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1.5rem;
+  font-weight: 600;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  box-shadow: 0 2px 8px 0 rgba(124,131,253,0.08);
+  transition: background 0.2s, box-shadow 0.2s;
+  backdrop-filter: blur(8px);
+}
+button:hover, .btn:hover {
+  background: rgba(163,177,138,0.85);
+  color: #fff;
+  box-shadow: 0 4px 16px 0 rgba(124,131,253,0.12);
+}
+
+.card, .surface {
+  background: rgba(255,255,255,0.7);
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  padding: 1.5rem;
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+input, textarea, select {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.7);
+  color: #22223B;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 4px 0 rgba(31, 38, 135, 0.04);
+  backdrop-filter: blur(8px);
+}
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid #7C83FD;
+  border-color: #7C83FD;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E0E1DD;
+  border-radius: 4px;
 }
 
 @layer utilities {

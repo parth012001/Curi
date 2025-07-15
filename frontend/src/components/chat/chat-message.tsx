@@ -71,9 +71,10 @@ export function ChatMessageComponent({ message }: ChatMessageProps) {
           className={cn(
             "inline-block p-6 rounded-3xl shadow-xl border",
             isUser 
-              ? "bg-gradient-to-r from-pink-500 via-purple-500 to-pink-600 text-white rounded-br-2xl rounded-tr-2xl rounded-bl-xl shadow-pink-500/25"
+              ? "bg-primary text-white border-white/30 rounded-br-2xl rounded-tr-2xl rounded-bl-xl shadow-lg"
               : "bg-white/90 backdrop-blur-sm border-white/20 text-gray-900 rounded-bl-2xl rounded-tl-2xl rounded-br-xl shadow-lg"
           )}
+          style={isUser ? { textShadow: '0 1px 8px rgba(34,34,59,0.18)' } : {}}
         >
           <p className="text-base leading-relaxed whitespace-pre-line">{message.content}</p>
         </motion.div>

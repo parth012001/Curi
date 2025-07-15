@@ -41,19 +41,24 @@ export function ProductCard({ product, isHighlighted = false }: ProductCardProps
 
   return (
     <motion.div
-      whileHover={{ y: -4, scale: 1.03 }}
+      initial={{ opacity: 0, y: 16, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 16, scale: 0.97 }}
+      whileHover={{ y: -4, scale: 1.03, boxShadow: '0 12px 40px 0 rgba(31,38,135,0.16)' }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 120, damping: 14 }}
       className={cn(
-        "rounded-2xl border p-4 shadow-md hover:shadow-lg transition-all duration-200",
+        "glass p-4 shadow-xl hover:shadow-2xl transition-all duration-200 border border-white/30",
         isHighlighted 
-          ? "bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-100 border-yellow-200 shadow-yellow-200/50"
-          : "bg-gradient-to-br from-white via-pink-50 to-purple-50 border-gray-100"
+          ? "ring-2 ring-primary/40"
+          : ""
       )}
     >
       <div className="space-y-3">
         {/* Product Title */}
         <h3 className={cn(
-          "font-semibold text-base line-clamp-2",
-          isHighlighted ? "text-gray-900" : "text-gray-900"
+          "font-semibold text-base line-clamp-2 text-text",
+          isHighlighted ? "text-primary" : ""
         )}>
           {product?.title || 'Product Title Not Available'}
         </h3>
@@ -77,32 +82,32 @@ export function ProductCard({ product, isHighlighted = false }: ProductCardProps
         <div className="flex items-center justify-between mt-2">
           <span className={cn(
             "font-bold text-lg",
-            isHighlighted ? "text-orange-600" : "text-green-600"
+            isHighlighted ? "text-primary" : "text-secondary"
           )}>
             {product?.price ? `$${product.price.toFixed(2)}` : 'Price not available'}
           </span>
           <button className={cn(
-            "p-2 rounded-full transition-colors shadow",
+            "p-2 rounded-full transition-colors shadow glass border border-white/30",
             isHighlighted 
-              ? "bg-orange-100 hover:bg-orange-200" 
-              : "bg-pink-100 hover:bg-pink-200"
+              ? "bg-primary/10 hover:bg-primary/20" 
+              : "bg-secondary/10 hover:bg-secondary/20"
           )}>
             <ShoppingBag className={cn(
               "w-5 h-5",
-              isHighlighted ? "text-orange-600" : "text-pink-600"
+              isHighlighted ? "text-primary" : "text-secondary"
             )} />
           </button>
         </div>
         
         {/* Category */}
-        <div className="text-xs text-purple-400 mt-2">
+        <div className="text-xs text-primary/70 mt-2">
           {product?.main_category || 'Beauty & Personal Care'}
         </div>
 
         {/* LLM Analysis Score for highlighted products */}
         {isHighlighted && product?.llm_analysis?.match_score && (
-          <div className="mt-2 p-2 bg-orange-100 rounded-lg">
-            <div className="text-xs text-orange-800 font-medium">
+          <div className="mt-2 p-2 bg-primary/10 rounded-lg">
+            <div className="text-xs text-primary font-medium">
               Match Score: {Math.min(100, Math.max(0, Math.round(product.llm_analysis.match_score * 100)))}%
             </div>
           </div>

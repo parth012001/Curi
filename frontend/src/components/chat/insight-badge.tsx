@@ -40,27 +40,32 @@ export function InsightBadge({ insight }: InsightBadgeProps) {
 
   // Choose appropriate icon and styling
   let icon = <Lightbulb className="w-3 h-3" />
-  let bgClass = "bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border-blue-200"
+  let bgClass = "glass border border-white/30 text-primary"
   
   if (isPositive) {
     icon = <ThumbsUp className="w-3 h-3" />
-    bgClass = "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-200"
+    bgClass = "glass border border-white/30 text-secondary"
   } else if (isNegative) {
     icon = <AlertTriangle className="w-3 h-3" />
-    bgClass = "bg-gradient-to-r from-red-100 to-pink-100 text-red-700 border-red-200"
+    bgClass = "glass border border-white/30 text-error"
   } else if (isRating) {
     icon = <Star className="w-3 h-3" />
-    bgClass = "bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-700 border-yellow-200"
+    bgClass = "glass border border-white/30 text-yellow-600"
   } else if (isUserFeedback) {
     icon = <Users className="w-3 h-3" />
-    bgClass = "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border-purple-200"
+    bgClass = "glass border border-white/30 text-primary"
   }
 
   return (
     <motion.div
-      whileHover={{ scale: 1.05, y: -2 }}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      whileHover={{ scale: 1.07, y: -2, boxShadow: '0 6px 24px 0 rgba(124,131,253,0.10)' }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: 'spring', stiffness: 180, damping: 18 }}
       className={cn(
-        "inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium shadow-sm border transition-all duration-200 cursor-pointer",
+        "inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium shadow-md transition-all duration-200 cursor-pointer",
         bgClass
       )}
     >

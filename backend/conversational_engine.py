@@ -300,20 +300,25 @@ class ConversationalEngine:
         # Keeping for backward compatibility
         return []
         
-    def get_conversational_response(self, query):
-        """Generate a conversational response with recommendations"""
+    def get_conversational_response(self, query, history=None):
+        """Generate a conversational response with recommendations, using session-based memory if history is provided"""
+        # Use the last N messages for context
+        context_messages = []
+        if history and isinstance(history, list):
+            context_messages = history[-6:]  # Use last 6 messages for context
+
         analysis = self.get_smart_recommendations(query)
-        
+
         # Generate natural language response
         if self.llm_engine.is_available():
             # Use LLM for response generation
             top_products = analysis['recommendations'][:3]  # Top 3 products
             analysis_results = [product.get('llm_analysis', {}) for product in top_products]
-            response = self.llm_engine.generate_response(query, top_products, analysis_results)
+            response = self.llm_engine.generate_response(query, top_products, analysis_results, context=context_messages)
         else:
             # Use fallback response generation
             response = self.generate_response(analysis)
-        
+
         return {
             'response': response,
             'recommendations': analysis['recommendations'],

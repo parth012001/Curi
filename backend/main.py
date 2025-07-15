@@ -43,6 +43,7 @@ llm_engine = None
 class ChatMessage(BaseModel):
     message: str
     user_id: Optional[str] = None
+    history: Optional[List[Dict[str, Any]]] = None
 
 class ChatResponse(BaseModel):
     response: str
@@ -116,8 +117,8 @@ async def chat(message: ChatMessage):
         if not conversational_engine:
             raise HTTPException(status_code=500, detail="Conversational engine not initialized")
         
-        # Process the query
-        response = conversational_engine.get_conversational_response(message.message)
+        # Process the query with conversation history
+        response = conversational_engine.get_conversational_response(message.message, history=message.history)
         
         # Extract components
         chat_response = response.get('response', '')

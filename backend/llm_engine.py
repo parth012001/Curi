@@ -176,9 +176,9 @@ class LLMEngine:
             print(f"⚠️  LLM product analysis failed: {e}")
             return {"match_score": 0.5, "reasoning": "Analysis failed", "key_features": [], "confidence_level": "low"}
     
-    def generate_response(self, user_query: str, top_products: List[Dict], analysis_results: List[Dict]) -> str:
+    def generate_response(self, user_query: str, top_products: List[Dict], analysis_results: List[Dict], context: Optional[list] = None) -> str:
         """
-        Generate a conversational response using LLM
+        Generate a conversational response using LLM, with optional conversation context
         """
         if not self.is_available():
             return self._generate_fallback_response(user_query, top_products)
@@ -195,21 +195,33 @@ class LLMEngine:
                 Reasoning: {analysis.get('reasoning', '')}
                 """
                 product_summaries.append(summary)
-            
+
+            # Add conversation context if provided
+            context_str = ""
+            if context and isinstance(context, list):
+                context_lines = []
+                for msg in context:
+                    role = msg.get('role', 'user')
+                    who = 'You' if role == 'user' else 'Curi'
+                    content = msg.get('content', '')
+                    context_lines.append(f"{who}: {content}")
+                context_str = "\nPrevious conversation:\n" + "\n".join(context_lines)
+
             prompt = f"""
             You are Curi, an intelligent beauty product research assistant. Generate a helpful, conversational response.
-            
+            {context_str}
             User Query: "{user_query}"
             
             Top Products Found:
             {chr(10).join(product_summaries)}
             
             Instructions:
-            1. Acknowledge the user's needs
-            2. Highlight the best match with reasoning
-            3. Mention key benefits from reviews
-            4. Be conversational and helpful
-            5. Keep it concise but informative
+            1. If the user is asking a follow-up, use the previous context to answer naturally.
+            2. If the user is asking about a new product, treat it as a new search.
+            3. Highlight the best match with reasoning.
+            4. Mention key benefits from reviews.
+            5. Be conversational and helpful.
+            6. Keep it concise but informative.
             
             Response:
             """
@@ -226,7 +238,7 @@ class LLMEngine:
             )
             
             return response.choices[0].message.content.strip()
-            
+        
         except Exception as e:
             print(f"⚠️  LLM response generation failed: {e}")
             return self._generate_fallback_response(user_query, top_products)

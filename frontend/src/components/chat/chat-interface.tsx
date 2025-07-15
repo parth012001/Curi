@@ -48,7 +48,7 @@ export function ChatInterface() {
     try {
       const response: ChatResponse = await apiCall("/chat", {
         method: "POST",
-        body: JSON.stringify({ message: input.trim() }),
+        body: JSON.stringify({ message: input.trim(), history: messages }),
       })
 
       const assistantMessage: ChatMessage = {

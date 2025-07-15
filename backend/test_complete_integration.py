@@ -200,6 +200,94 @@ def compare_old_vs_new_system():
     print(f"   Old: Generic responses")
     print(f"   New: Personalized, specific responses")
 
+def test_conversational_memory():
+    """Test session-based conversational memory with edge cases"""
+    print("\n🧪 Testing Conversational Memory (Session-based)")
+    print("=" * 60)
+    
+    data_processor = BeautyDataProcessor()
+    data_processor.load_sample_data()
+    llm_engine = LLMEngine()
+    conversational_engine = ConversationalEngine(data_processor, llm_engine)
+
+    # 1. Simple multi-turn follow-up
+    history = [
+        {"role": "user", "content": "Recommend a moisturizer for dry skin."},
+        {"role": "assistant", "content": "Here are some moisturizers for dry skin..."},
+        {"role": "user", "content": "What about for sensitive skin?"}
+    ]
+    followup_query = "What about for sensitive skin?"
+    response = conversational_engine.get_conversational_response(followup_query, history=history)
+    print("\n🔄 Multi-turn follow-up:")
+    print(response['response'])
+    assert any(word in response['response'].lower() for word in ["sensitive skin", "sensitive"]), "Follow-up context not used."
+
+    # 2. Switch topic mid-session
+    history2 = history + [
+        {"role": "assistant", "content": response['response']},
+        {"role": "user", "content": "Show me the best sunscreen for oily skin."}
+    ]
+    new_topic_query = "Show me the best sunscreen for oily skin."
+    response2 = conversational_engine.get_conversational_response(new_topic_query, history=history2)
+    print("\n🔄 Topic switch:")
+    print(response2['response'])
+    assert "sunscreen" in response2['response'].lower(), "Topic switch not handled."
+    assert "oily skin" in response2['response'].lower(), "New context not recognized."
+
+    # 3. Edge case: Empty history
+    response3 = conversational_engine.get_conversational_response("Recommend a serum for anti-aging.", history=[])
+    print("\n🔄 Empty history:")
+    print(response3['response'])
+    assert "serum" in response3['response'].lower(), "Serum not mentioned in response."
+    assert "anti-aging" in response3['response'].lower(), "Anti-aging not mentioned."
+
+    # 4. Edge case: Very long history (should only use last 6 messages)
+    long_history = []
+    for i in range(20):
+        long_history.append({"role": "user", "content": f"Dummy message {i}"})
+        long_history.append({"role": "assistant", "content": f"Dummy reply {i}"})
+    long_history.append({"role": "user", "content": "Recommend a toner for redness."})
+    response4 = conversational_engine.get_conversational_response("Recommend a toner for redness.", history=long_history)
+    print("\n🔄 Very long history:")
+    print(response4['response'])
+    assert "toner" in response4['response'].lower(), "Toner not mentioned."
+    assert "redness" in response4['response'].lower(), "Redness not mentioned."
+
+    # 5. Edge case: Malformed history (should not crash)
+    malformed_history = [
+        {"role": "user", "content": "Recommend a cleanser."},
+        {"role": "assistant"},  # Missing content
+        {"role": "user", "content": None},  # None content
+        "just a string",  # Not a dict
+        12345  # Not a dict
+    ]
+    try:
+        response5 = conversational_engine.get_conversational_response("What about for acne-prone skin?", history=malformed_history)
+        print("\n🔄 Malformed history:")
+        print(response5['response'])
+        assert "acne" in response5['response'].lower(), "Acne context not handled."
+    except Exception as e:
+        print(f"[ERROR] Malformed history caused exception: {e}")
+        assert False, "Malformed history should not crash the system."
+
+    # 6. Abrupt topic change after follow-up
+    abrupt_history = [
+        {"role": "user", "content": "Recommend a moisturizer for dry skin."},
+        {"role": "assistant", "content": "Here are some moisturizers for dry skin..."},
+        {"role": "user", "content": "What about for sensitive skin?"},
+        {"role": "assistant", "content": "Here are some for sensitive skin..."},
+        {"role": "user", "content": "Show me a luxury serum for wrinkles."}
+    ]
+    abrupt_query = "Show me a luxury serum for wrinkles."
+    response6 = conversational_engine.get_conversational_response(abrupt_query, history=abrupt_history)
+    print("\n🔄 Abrupt topic change:")
+    print(response6['response'])
+    assert "serum" in response6['response'].lower(), "Serum not mentioned after abrupt change."
+    assert "wrinkles" in response6['response'].lower(), "Wrinkles not mentioned."
+    assert "luxury" in response6['response'].lower(), "Luxury not mentioned."
+
+    print("\n✅ Conversational memory test passed!")
+
 if __name__ == "__main__":
     # Test complete integration
     test_complete_integration()
@@ -211,4 +299,7 @@ if __name__ == "__main__":
     test_response_quality()
     
     # Compare old vs new system
-    compare_old_vs_new_system() 
+    compare_old_vs_new_system()
+    
+    # Test conversational memory
+    test_conversational_memory() 

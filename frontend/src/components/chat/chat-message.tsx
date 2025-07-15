@@ -6,6 +6,7 @@ import { ChatMessage, Product } from "@/lib/utils"
 import { cn } from "@/lib/utils"
 import { ProductCard } from "./product-card"
 import { InsightBadge } from "./insight-badge"
+import ReactMarkdown from "react-markdown"
 
 interface ChatMessageProps {
   message: ChatMessage
@@ -76,7 +77,20 @@ export function ChatMessageComponent({ message }: ChatMessageProps) {
           )}
           style={isUser ? { textShadow: '0 1px 8px rgba(34,34,59,0.18)' } : {}}
         >
-          <p className="text-base leading-relaxed whitespace-pre-line">{message.content}</p>
+          <div className="text-base leading-relaxed">
+            <ReactMarkdown 
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                strong: ({ children }) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                em: ({ children }) => <em className="italic text-gray-700">{children}</em>,
+                ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                li: ({ children }) => <li className="text-gray-700">{children}</li>,
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
         </motion.div>
 
         {/* Top Recommendation - Highlighted */}

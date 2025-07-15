@@ -122,6 +122,7 @@ async def chat(message: ChatMessage):
         
         # Extract components
         chat_response = response.get('response', '')
+        response_type = response.get('response_type', 'new_recommendation')
         products = response.get('recommendations', [])
         
         # Extract insights from products
@@ -141,11 +142,27 @@ async def chat(message: ChatMessage):
                     serializable_product[key] = value
             serializable_products.append(serializable_product)
         
+        # Conditionally show products based on response type
+        # For follow-up questions, don't show product details again
+        if response_type == 'followup_answer':
+            # Only show products if the user specifically asked for alternatives
+            if any(word in message.message.lower() for word in ['alternative', 'different', 'other', 'another', 'show me']):
+                # Keep products for alternative requests
+                pass
+            else:
+                # Hide products for simple follow-up questions
+                serializable_products = []
+                insights = []
+        
         # Calculate confidence based on response quality and LLM analysis
         confidence = 0.3  # Base confidence - start lower
         
-        # Boost confidence based on number of products
-        if len(serializable_products) > 0:
+        # Boost confidence based on response type
+        if response_type == 'followup_answer':
+            confidence += 0.1  # Follow-up answers are more targeted
+        
+        # Boost confidence based on number of products (only for new recommendations)
+        if response_type == 'new_recommendation' and len(serializable_products) > 0:
             confidence += 0.2
             
         # Boost confidence based on LLM analysis availability and quality

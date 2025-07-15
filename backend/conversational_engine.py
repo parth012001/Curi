@@ -314,13 +314,24 @@ class ConversationalEngine:
             # Use LLM for response generation
             top_products = analysis['recommendations'][:3]  # Top 3 products
             analysis_results = [product.get('llm_analysis', {}) for product in top_products]
-            response = self.llm_engine.generate_response(query, top_products, analysis_results, context=context_messages)
+            llm_response = self.llm_engine.generate_response(query, top_products, analysis_results, context=context_messages)
+            
+            # Handle new response format
+            if isinstance(llm_response, dict):
+                response_text = llm_response.get('response', '')
+                response_type = llm_response.get('response_type', 'new_recommendation')
+            else:
+                # Backward compatibility for old format
+                response_text = llm_response
+                response_type = 'new_recommendation'
         else:
             # Use fallback response generation
-            response = self.generate_response(analysis)
+            response_text = self.generate_response(analysis)
+            response_type = 'new_recommendation'
 
         return {
-            'response': response,
+            'response': response_text,
+            'response_type': response_type,
             'recommendations': analysis['recommendations'],
             'intent': analysis['intent'],
             'features': analysis['features'],

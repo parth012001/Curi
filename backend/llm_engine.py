@@ -176,17 +176,22 @@ class LLMEngine:
             print(f"⚠️  LLM product analysis failed: {e}")
             return {"match_score": 0.5, "reasoning": "Analysis failed", "key_features": [], "confidence_level": "low"}
     
-    def generate_response(self, user_query: str, top_products: List[Dict], analysis_results: List[Dict], context: Optional[list] = None) -> str:
+    def generate_response(self, user_query: str, top_products: List[Dict], analysis_results: List[Dict], context: Optional[list] = None) -> Dict[str, Any]:
         """
-        Generate a conversational response using LLM, with optional conversation context
+        Generate a context-aware conversational response using LLM
+        Returns a dict with response text and response type
         """
         if not self.is_available():
-            return self._generate_fallback_response(user_query, top_products)
+            fallback_response = self._generate_fallback_response(user_query, top_products)
+            return {"response": fallback_response, "response_type": "new_recommendation"}
         
         try:
+            # Analyze query type and context
+            query_analysis = self._analyze_query_context(user_query, context)
+            
             # Prepare product summaries
             product_summaries = []
-            for i, (product, analysis) in enumerate(zip(top_products[:3], analysis_results[:3])):  # Top 3 products
+            for i, (product, analysis) in enumerate(zip(top_products[:3], analysis_results[:3])):
                 summary = f"""
                 Product {i+1}: {product.get('title', '')}
                 Brand: {product.get('store', '')}
@@ -207,24 +212,47 @@ class LLMEngine:
                     context_lines.append(f"{who}: {content}")
                 context_str = "\nPrevious conversation:\n" + "\n".join(context_lines)
 
-            prompt = f"""
-            You are Curi, an intelligent beauty product research assistant. Generate a helpful, conversational response.
-            {context_str}
-            User Query: "{user_query}"
-            
-            Top Products Found:
-            {chr(10).join(product_summaries)}
-            
-            Instructions:
-            1. If the user is asking a follow-up, use the previous context to answer naturally.
-            2. If the user is asking about a new product, treat it as a new search.
-            3. Highlight the best match with reasoning.
-            4. Mention key benefits from reviews.
-            5. Be conversational and helpful.
-            6. Keep it concise but informative.
-            
-            Response:
-            """
+            # Determine response type and generate appropriate prompt
+            if query_analysis['is_followup_question']:
+                prompt = f"""
+                You are Curi, an intelligent beauty product research assistant. The user is asking a follow-up question about a previously recommended product.
+                
+                {context_str}
+                User Query: "{user_query}"
+                
+                Available Product Information:
+                {chr(10).join(product_summaries)}
+                
+                Instructions:
+                1. Answer the specific question about the product (yes/no with explanation)
+                2. If you don't have enough information, say so and offer to find alternatives
+                3. Be direct and helpful
+                4. Don't recommend new products unless specifically asked
+                5. Keep it concise and conversational
+                
+                Response:
+                """
+                response_type = "followup_answer"
+            else:
+                prompt = f"""
+                You are Curi, an intelligent beauty product research assistant. Generate a helpful, conversational response for a new product request.
+                
+                {context_str}
+                User Query: "{user_query}"
+                
+                Top Products Found:
+                {chr(10).join(product_summaries)}
+                
+                Instructions:
+                1. Highlight the best match with reasoning
+                2. Mention key benefits from reviews
+                3. Be conversational and helpful
+                4. Keep it concise but informative
+                5. Provide full product details for new recommendations
+                
+                Response:
+                """
+                response_type = "new_recommendation"
             
             client = openai.OpenAI(api_key=self.api_key)
             response = client.chat.completions.create(
@@ -237,11 +265,49 @@ class LLMEngine:
                 temperature=0.7
             )
             
-            return response.choices[0].message.content.strip()
+            return {
+                "response": response.choices[0].message.content.strip(),
+                "response_type": response_type
+            }
         
         except Exception as e:
             print(f"⚠️  LLM response generation failed: {e}")
-            return self._generate_fallback_response(user_query, top_products)
+            fallback_response = self._generate_fallback_response(user_query, top_products)
+            return {"response": fallback_response, "response_type": "new_recommendation"}
+    
+    def _analyze_query_context(self, user_query: str, context: Optional[list] = None) -> Dict[str, Any]:
+        """
+        Analyze if the query is a follow-up question about a previously recommended product
+        """
+        query_lower = user_query.lower()
+        
+        # Keywords that indicate follow-up questions about products
+        followup_keywords = [
+            'this', 'that', 'it', 'the', 'would', 'could', 'should', 'is', 'does', 'can',
+            'good for', 'suitable for', 'work as', 'act as', 'daily use', 'everyday use',
+            'side effects', 'ingredients', 'price', 'cost', 'rating', 'reviews'
+        ]
+        
+        # Check if query contains follow-up indicators
+        has_followup_keywords = any(keyword in query_lower for keyword in followup_keywords)
+        
+        # Check if there's recent context about products
+        has_product_context = False
+        if context and isinstance(context, list):
+            recent_messages = context[-4:]  # Check last 4 messages
+            for msg in recent_messages:
+                content = msg.get('content', '').lower()
+                if any(word in content for word in ['recommend', 'product', 'shampoo', 'moisturizer', 'serum', 'foundation']):
+                    has_product_context = True
+                    break
+        
+        is_followup_question = has_followup_keywords and has_product_context
+        
+        return {
+            "is_followup_question": is_followup_question,
+            "has_followup_keywords": has_followup_keywords,
+            "has_product_context": has_product_context
+        }
     
     def _generate_fallback_response(self, user_query: str, top_products: List[Dict]) -> str:
         """Fallback response when LLM is not available"""

@@ -2,26 +2,30 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Send, Sparkles, Loader2, User, LogOut } from "lucide-react"
+import { Send, RefreshCw, ExternalLink, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ChatMessageComponent } from "./chat-message"
 import { ChatMessage, apiCall, ChatResponse } from "@/lib/utils"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
 
 export function ChatInterface() {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [showUserMenu, setShowUserMenu] = useState(false)
-  const [isSigningOut, setIsSigningOut] = useState(false)
+  const [showScopeDropdown, setShowScopeDropdown] = useState(false)
+  const [currentTopic, setCurrentTopic] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Debug session
-  useEffect(() => {
-    console.log('Session:', session)
-  }, [session])
+  const userName = session?.user?.name || session?.user?.email?.split('@')[0] || 'John'
+
+  const suggestedPrompts = [
+    "Looking for a skincare product that matches my needs",
+    "Looking for a skincare product that matches my needs", 
+    "Looking for a skincare product that matches my needs",
+    "Which lipstick do I pick from my fav make up brand?"
+  ]
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -31,24 +35,30 @@ export function ChatInterface() {
     scrollToBottom()
   }, [messages])
 
-  const handleSendMessage = async () => {
-    if (!input.trim() || isLoading) return
+  const handleSendMessage = async (messageText?: string) => {
+    const textToSend = messageText || input.trim()
+    if (!textToSend || isLoading) return
+
+    // Set topic from first message
+    if (messages.length === 0) {
+      setCurrentTopic("Facewash for 24 y/o man")
+    }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: input.trim(),
+      content: textToSend,
       role: "user",
       timestamp: new Date(),
     }
 
     setMessages(prev => [...prev, userMessage])
-    setInput("")
+    if (!messageText) setInput("")
     setIsLoading(true)
 
     try {
       const response: ChatResponse = await apiCall("/chat", {
         method: "POST",
-        body: JSON.stringify({ message: input.trim(), history: messages }),
+        body: JSON.stringify({ message: textToSend, history: messages }),
       })
 
       const assistantMessage: ChatMessage = {
@@ -83,14 +93,14 @@ export function ChatInterface() {
     }
   }
 
-  // Close user menu when clicking outside
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element
-      const userMenu = target.closest('.user-menu')
+      const dropdown = target.closest('.scope-dropdown')
       
-      if (showUserMenu && !userMenu) {
-        setShowUserMenu(false)
+      if (showScopeDropdown && !dropdown) {
+        setShowScopeDropdown(false)
       }
     }
 
@@ -98,13 +108,23 @@ export function ChatInterface() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [showUserMenu])
+  }, [showScopeDropdown])
 
-  return (
-    <div className="flex justify-center items-center min-h-[calc(100vh-80px)] w-full px-2 md:px-0">
-      <div className="w-full max-w-3xl flex flex-col h-[90vh] glass overflow-hidden">
+  // If there are messages, show the chat interface
+  if (messages.length > 0) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-80px)] w-full max-w-6xl mx-auto">
+        {/* Topic Header */}
+        {currentTopic && (
+          <div className="px-6 py-4 border-b border-gray-200 bg-white">
+            <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+              {currentTopic}
+            </h1>
+          </div>
+        )}
+
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-transparent">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white">
           <AnimatePresence mode="wait">
             {messages.map((message, index) => (
               <motion.div
@@ -119,20 +139,32 @@ export function ChatInterface() {
                 }}
                 className={
                   message.role === 'user'
-                    ? 'flex justify-end'
-                    : 'flex justify-start'
+                    ? 'flex justify-end items-start gap-3'
+                    : 'flex justify-start items-start gap-3'
                 }
               >
+                {message.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold text-sm">C</span>
+                  </div>
+                )}
+                
                 <div
                   className={
                     message.role === 'user'
-                      ? 'glass bg-primary/80 text-white rounded-2xl px-5 py-3 max-w-[80%] shadow-lg border border-white/30'
-                      : 'glass bg-white/60 text-text rounded-2xl px-5 py-3 max-w-[80%] shadow-md border border-white/20'
+                      ? 'bg-gray-800 text-white rounded-2xl px-5 py-3 max-w-[70%] shadow-lg'
+                      : 'bg-gray-100 text-gray-800 rounded-2xl px-5 py-3 max-w-[80%] shadow-md'
                   }
                   style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
                 >
                   <ChatMessageComponent message={message} />
                 </div>
+
+                {message.role === 'user' && (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-semibold text-sm">{userName.charAt(0).toUpperCase()}</span>
+                  </div>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
@@ -140,23 +172,137 @@ export function ChatInterface() {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-white/20 glass flex items-center gap-3">
-          <Input
-            className="flex-1 glass bg-white/70 border border-white/30 rounded-lg px-4 py-2 text-text focus:outline-primary"
-            placeholder="Type your message..."
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyPress}
-            disabled={isLoading}
-            autoFocus
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={isLoading || !input.trim()}
-            className="bg-primary text-white font-semibold px-6 py-2 rounded-lg shadow-lg hover:bg-secondary transition-colors border-none"
+        <div className="p-6 border-t border-gray-200 bg-white">
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <textarea
+                className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Ask me about beauty products...."
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyPress}
+                disabled={isLoading}
+                rows={3}
+                style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              {/* Scope Dropdown */}
+              <div className="relative scope-dropdown">
+                <button
+                  onClick={() => setShowScopeDropdown(!showScopeDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm hover:bg-gray-50"
+                >
+                  All Web
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {showScopeDropdown && (
+                  <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]">
+                    <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">All Web</button>
+                    <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Beauty Only</button>
+                    <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Reviews</button>
+                  </div>
+                )}
+              </div>
+              {/* Send Button */}
+              <Button
+                onClick={() => handleSendMessage()}
+                disabled={isLoading || !input.trim()}
+                className="bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg shadow-md transition-colors border-none"
+              >
+                <Send className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Initial welcome screen
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] w-full max-w-4xl mx-auto px-6">
+      {/* Greeting */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+          Hi there, {userName}
+        </h1>
+        <h2 className="text-3xl font-bold text-gray-800 mb-4" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+          What would you like to shop?
+        </h2>
+        <p className="text-gray-600 text-lg" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+          Use one of the most common prompts below or use your own to begin
+        </p>
+      </div>
+
+      {/* Suggested Prompts */}
+      <div className="grid grid-cols-2 gap-4 mb-6 w-full max-w-2xl">
+        {suggestedPrompts.map((prompt, index) => (
+          <motion.button
+            key={index}
+            onClick={() => handleSendMessage(prompt)}
+            className="relative p-4 bg-gray-100 rounded-lg text-left hover:bg-gray-200 transition-colors group"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            {isLoading ? <Loader2 className="animate-spin w-5 h-5" /> : <Send className="w-5 h-5" />}
-          </Button>
+            <ExternalLink className="absolute top-3 right-3 w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+            <p className="text-gray-800 font-medium pr-8" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+              {prompt}
+            </p>
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Refresh Prompts */}
+      <button className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors mb-8">
+        <RefreshCw className="w-4 h-4" />
+        <span className="text-sm" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+          Refresh Prompts
+        </span>
+      </button>
+
+      {/* Input Area */}
+      <div className="w-full max-w-2xl">
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <textarea
+              className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              placeholder="Ask me about beauty products...."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyPress}
+              disabled={isLoading}
+              rows={3}
+              style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            {/* Scope Dropdown */}
+            <div className="relative scope-dropdown">
+              <button
+                onClick={() => setShowScopeDropdown(!showScopeDropdown)}
+                className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm hover:bg-gray-50"
+              >
+                All Web
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              {showScopeDropdown && (
+                <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]">
+                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">All Web</button>
+                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Beauty Only</button>
+                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Reviews</button>
+                </div>
+              )}
+            </div>
+            {/* Send Button */}
+            <Button
+              onClick={() => handleSendMessage()}
+              disabled={isLoading || !input.trim()}
+              className="bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg shadow-md transition-colors border-none"
+            >
+              <Send className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

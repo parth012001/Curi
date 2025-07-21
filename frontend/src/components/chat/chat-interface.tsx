@@ -38,11 +38,6 @@ export function ChatInterface() {
     const textToSend = messageText || input.trim()
     if (!textToSend || isLoading) return
 
-    // Set topic from first message
-    if (messages.length === 0) {
-      setCurrentTopic("Facewash for 24 y/o man")
-    }
-
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content: textToSend,

@@ -138,7 +138,7 @@ export function ChatInterface() {
                 </div>
 
                 {message.role === 'user' && (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0">
                     <span className="text-white font-semibold text-sm">{userName.charAt(0).toUpperCase()}</span>
                   </div>
                 )}

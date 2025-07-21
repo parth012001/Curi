@@ -55,7 +55,7 @@ export default function Header() {
         <div className="relative">
           <button
             onClick={() => setShowMenu((v) => !v)}
-            className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+            className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
             style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
           >
             {userName.charAt(0).toUpperCase()}

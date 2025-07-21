@@ -160,16 +160,16 @@ export function ChatInterface() {
                 onKeyDown={handleKeyPress}
                 disabled={isLoading}
                 rows={1}
-                style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+                style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif', minHeight: '36px' }}
               />
             </div>
             {/* Send Button */}
             <Button
               onClick={() => handleSendMessage()}
               disabled={isLoading || !input.trim()}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md transition-colors border-none h-10 w-10 flex items-center justify-center p-0"
+              className="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md transition-colors border-none h-12 w-12 flex items-center justify-center p-0 mt-1"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-5 h-5" />
             </Button>
           </div>
         </div>
@@ -194,7 +194,7 @@ export function ChatInterface() {
       </div>
 
       {/* Suggested Prompts */}
-      <div className="grid grid-cols-2 gap-4 mb-6 w-full max-w-2xl">
+      <div className="grid grid-cols-2 gap-4 mb-12 w-full max-w-2xl">
         {suggestedPrompts.map((prompt, index) => (
           <motion.button
             key={index}
@@ -211,17 +211,9 @@ export function ChatInterface() {
         ))}
       </div>
 
-      {/* Refresh Prompts */}
-      <button className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors mb-8">
-        <RefreshCw className="w-4 h-4" />
-        <span className="text-sm" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
-          Refresh Prompts
-        </span>
-      </button>
-
       {/* Input Area */}
       <div className="w-full max-w-2xl">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           <div className="flex-1">
             <textarea
               className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -231,16 +223,16 @@ export function ChatInterface() {
               onKeyDown={handleKeyPress}
               disabled={isLoading}
               rows={1}
-              style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
+              style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif', minHeight: '36px' }}
             />
           </div>
           {/* Send Button */}
           <Button
             onClick={() => handleSendMessage()}
             disabled={isLoading || !input.trim()}
-            className="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md transition-colors border-none h-10 w-10 flex items-center justify-center p-0"
+            className="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md transition-colors border-none h-12 w-12 flex items-center justify-center p-0 mt-1"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-6 h-6" />
           </Button>
         </div>
       </div>

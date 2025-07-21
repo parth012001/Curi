@@ -20,10 +20,10 @@ export function ChatInterface() {
   const userName = session?.user?.name || session?.user?.email?.split('@')[0] || 'John'
 
   const suggestedPrompts = [
-    "Looking for a skincare product that matches my needs",
-    "Looking for a skincare product that matches my needs", 
-    "Looking for a skincare product that matches my needs",
-    "Which lipstick do I pick from my fav make up brand?"
+    "Can you suggest the best long-lasting brown lipstick",
+    "What's a good foundation for oily skin that doesn't look cakey?",
+    "I need a gentle face cleanser for sensitive skin—any recommendations?",
+    "What's a good everyday mascara that doesn't smudge?"
   ]
 
   const scrollToBottom = () => {

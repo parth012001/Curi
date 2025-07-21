@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Send, RefreshCw, ExternalLink, ChevronDown } from "lucide-react"
+import { Send, RefreshCw, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ChatMessageComponent } from "./chat-message"
@@ -14,7 +14,6 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [showScopeDropdown, setShowScopeDropdown] = useState(false)
   const [currentTopic, setCurrentTopic] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -93,23 +92,6 @@ export function ChatInterface() {
     }
   }
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element
-      const dropdown = target.closest('.scope-dropdown')
-      
-      if (showScopeDropdown && !dropdown) {
-        setShowScopeDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showScopeDropdown])
-
   // If there are messages, show the chat interface
   if (messages.length > 0) {
     return (
@@ -173,46 +155,27 @@ export function ChatInterface() {
 
         {/* Input */}
         <div className="p-6 border-t border-gray-200 bg-white">
-          <div className="flex items-end gap-3">
+          <div className="flex items-center gap-3">
             <div className="flex-1">
               <textarea
-                className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Ask me about beauty products...."
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
                 disabled={isLoading}
-                rows={3}
+                rows={1}
                 style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
               />
             </div>
-            <div className="flex flex-col gap-2">
-              {/* Scope Dropdown */}
-              <div className="relative scope-dropdown">
-                <button
-                  onClick={() => setShowScopeDropdown(!showScopeDropdown)}
-                  className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm hover:bg-gray-50"
-                >
-                  All Web
-                  <ChevronDown className="w-4 h-4" />
-                </button>
-                {showScopeDropdown && (
-                  <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]">
-                    <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">All Web</button>
-                    <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Beauty Only</button>
-                    <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Reviews</button>
-                  </div>
-                )}
-              </div>
-              {/* Send Button */}
-              <Button
-                onClick={() => handleSendMessage()}
-                disabled={isLoading || !input.trim()}
-                className="bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg shadow-md transition-colors border-none"
-              >
-                <Send className="w-5 h-5" />
-              </Button>
-            </div>
+            {/* Send Button */}
+            <Button
+              onClick={() => handleSendMessage()}
+              disabled={isLoading || !input.trim()}
+              className="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md transition-colors border-none h-10 w-10 flex items-center justify-center p-0"
+            >
+              <Send className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
@@ -263,46 +226,27 @@ export function ChatInterface() {
 
       {/* Input Area */}
       <div className="w-full max-w-2xl">
-        <div className="flex items-end gap-3">
+        <div className="flex items-center gap-3">
           <div className="flex-1">
             <textarea
-              className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Ask me about beauty products...."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyPress}
               disabled={isLoading}
-              rows={3}
+              rows={1}
               style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}
             />
           </div>
-          <div className="flex flex-col gap-2">
-            {/* Scope Dropdown */}
-            <div className="relative scope-dropdown">
-              <button
-                onClick={() => setShowScopeDropdown(!showScopeDropdown)}
-                className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 text-sm hover:bg-gray-50"
-              >
-                All Web
-                <ChevronDown className="w-4 h-4" />
-              </button>
-              {showScopeDropdown && (
-                <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px]">
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">All Web</button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Beauty Only</button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Reviews</button>
-                </div>
-              )}
-            </div>
-            {/* Send Button */}
-            <Button
-              onClick={() => handleSendMessage()}
-              disabled={isLoading || !input.trim()}
-              className="bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg shadow-md transition-colors border-none"
-            >
-              <Send className="w-5 h-5" />
-            </Button>
-          </div>
+          {/* Send Button */}
+          <Button
+            onClick={() => handleSendMessage()}
+            disabled={isLoading || !input.trim()}
+            className="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md transition-colors border-none h-10 w-10 flex items-center justify-center p-0"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>

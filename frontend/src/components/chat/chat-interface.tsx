@@ -129,7 +129,7 @@ export function ChatInterface() {
                 <div
                   className={
                     message.role === 'user'
-                      ? 'bg-gray-800 text-white rounded-2xl px-5 py-3 max-w-[70%] shadow-lg'
+                      ? 'bg-gray-100 text-gray-800 rounded-2xl px-5 py-3 max-w-[70%] shadow-lg'
                       : 'bg-gray-100 text-gray-800 rounded-2xl px-5 py-3 max-w-[80%] shadow-md'
                   }
                   style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}

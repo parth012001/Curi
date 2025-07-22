@@ -12,8 +12,10 @@ from dotenv import load_dotenv
 
 # Import our existing modules
 from data_processor import BeautyDataProcessor as DataProcessor
+from live_data_processor import BeautyDataProcessor as LiveDataProcessor
 from conversational_engine import ConversationalEngine
 from llm_engine import LLMEngine
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -67,11 +69,21 @@ async def startup_event():
     global data_processor, conversational_engine, llm_engine
     
     try:
-        print("🔄 Initializing Curi backend...")
+        print("🔄 Initializing Curi backend with live data...")
         
-        # Initialize data processor
-        data_processor = DataProcessor()
-        data_processor.load_sample_data()
+        # Check if Best Buy API key is available
+        bestbuy_key = os.getenv('BESTBUY_API_KEY')
+        rapidapi_key = os.getenv('RAPIDAPI_KEY')
+        
+        if bestbuy_key:
+            print("🌐 Using live Best Buy API data")
+            data_processor = LiveDataProcessor(bestbuy_key, rapidapi_key)
+            await data_processor.initialize_with_live_data()
+        else:
+            print("📁 Using static data (no API key found)")
+            data_processor = DataProcessor()
+            data_processor.load_sample_data()
+        
         print("✅ Data processor initialized")
         
         # Initialize conversational engine
@@ -292,6 +304,66 @@ async def get_top_categories(limit: int = 10):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting top categories: {str(e)}")
+
+@app.get("/admin/cache/stats")
+async def get_cache_stats():
+    """Get cache performance statistics"""
+    try:
+        if not data_processor or not hasattr(data_processor, 'get_performance_stats'):
+            return {"message": "Cache stats not available for static data processor"}
+        
+        stats = data_processor.get_performance_stats()
+        return {"cache_stats": stats}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting cache stats: {str(e)}")
+
+@app.post("/admin/cache/refresh")
+async def refresh_cache():
+    """Manually refresh the cache with latest data"""
+    try:
+        if not data_processor or not hasattr(data_processor, 'refresh_cache'):
+            raise HTTPException(status_code=400, detail="Cache refresh not available for static data processor")
+        
+        await data_processor.refresh_cache()
+        return {"message": "Cache refreshed successfully"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error refreshing cache: {str(e)}")
+
+@app.delete("/admin/cache/cleanup")
+async def cleanup_cache():
+    """Clean up expired cache entries"""
+    try:
+        if not data_processor or not hasattr(data_processor, 'cleanup_old_cache'):
+            return {"message": "Cache cleanup not available for static data processor"}
+        
+        removed_count = data_processor.cleanup_old_cache()
+        return {"message": f"Cleaned up {removed_count} expired cache entries"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error cleaning cache: {str(e)}")
+
+@app.get("/admin/system/status")
+async def get_system_status():
+    """Get comprehensive system status"""
+    try:
+        status = {
+            "data_processor_type": "live" if hasattr(data_processor, 'data_source') else "static",
+            "data_loaded": data_processor is not None,
+            "llm_available": llm_engine is not None,
+            "products_count": len(data_processor.products_df) if data_processor and data_processor.products_df is not None else 0,
+            "reviews_count": len(data_processor.reviews_df) if data_processor and data_processor.reviews_df is not None else 0
+        }
+        
+        # Add live data specific stats
+        if hasattr(data_processor, 'get_performance_stats'):
+            status.update(data_processor.get_performance_stats())
+        
+        return {"system_status": status}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting system status: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(

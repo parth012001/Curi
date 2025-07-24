@@ -19,20 +19,18 @@ cd backend
 pip install -r requirements.txt
 ```
 
-### 2. Set Up Environment Variables
-```bash
-# Copy the example environment file
-cp .env.example .env
+### 2. Verify Environment Variables
+Your root `.env` file already has the Best Buy API key configured. If you want to add optional services:
 
-# Edit .env with your API keys
+```bash
+# Edit the root .env file to add optional keys
 nano .env
 ```
 
-Add your Best Buy API key:
+Optional additions:
 ```env
-BESTBUY_API_KEY=your_actual_api_key_here
-RAPIDAPI_KEY=your_rapidapi_key_here  # Optional but recommended
-OPENAI_API_KEY=your_openai_key_here  # For LLM features
+RAPIDAPI_KEY=your_rapidapi_key_here  # For fallback data sources
+REDIS_URL=redis://localhost:6379     # For faster caching
 ```
 
 ### 3. Install Redis (Optional but Recommended)

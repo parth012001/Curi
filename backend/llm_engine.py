@@ -4,9 +4,10 @@ import os
 from typing import List, Dict, Any, Optional
 import tiktoken
 from dotenv import load_dotenv
+import os
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from root .env file
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 class LLMEngine:
     def __init__(self, api_key: Optional[str] = None):

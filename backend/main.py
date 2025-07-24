@@ -17,8 +17,8 @@ from conversational_engine import ConversationalEngine
 from llm_engine import LLMEngine
 import asyncio
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from root directory
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # Initialize FastAPI app
 app = FastAPI(

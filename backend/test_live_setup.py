@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 from live_data_processor import LiveDataProcessor
 from data_sources import UnifiedDataSource
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from root directory
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 async def test_setup():
     """Comprehensive test of the live data setup"""
